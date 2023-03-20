@@ -1,9 +1,8 @@
 from copy import copy
 from sqlalchemy.ext.asyncio import AsyncEngine
-from sqlalchemy_utils import database_exists
 from sqlalchemy_utils.functions.orm import quote
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import create_async_engine
 from aps.conf import settings
 from sqlalchemy.engine.url import make_url
 

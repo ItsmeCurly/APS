@@ -1,4 +1,3 @@
-from logging.config import fileConfig
 from threading import Thread
 import anyio
 

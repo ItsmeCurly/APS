@@ -1,6 +1,5 @@
 import asyncio
 import click
-from aps.conf import settings
 
 
 @click.group("database")
@@ -39,6 +38,6 @@ def drop(yes: bool):
 
     try:
         asyncio.run(drop_database(engine))
-        click.secho(f"Success", fg="green")
+        click.secho("Success", fg="green")
     except Exception as e:
         click.secho(f"Database drop failed. Failure reason: \n{e}", fg="red")

@@ -1,4 +1,4 @@
-from google_play_scraper import reviews_all, Sort
+from google_play_scraper import reviews_all
 
 
 result = reviews_all(
