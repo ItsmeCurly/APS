@@ -8,6 +8,7 @@ from sqlalchemy.pool import NullPool
 from alembic import context
 from aps.db.models.base import Base
 from aps.conf import settings
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -58,6 +59,7 @@ def do_run_migrations(connection):
     with context.begin_transaction():
         context.run_migrations()
 
+
 async def run_migrations_online() -> None:
     """Run migrations in 'online' mode.
 
@@ -74,12 +76,14 @@ async def run_migrations_online() -> None:
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
 
+
 def run_async_migrations():
     if context.is_offline_mode():
         run_migrations_offline()
     else:
         anyio.run(run_migrations_online)
 
-thread=Thread(target=run_async_migrations)
+
+thread = Thread(target=run_async_migrations)
 thread.start()
 thread.join()

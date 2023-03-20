@@ -1,6 +1,3 @@
-
-
-
 import json
 from typing import Any
 import requests
@@ -17,7 +14,6 @@ class Charts:
 class GPlay:
     charts = Charts()
 
-
     def __init__(self, base_url: str = "https://play.google.com") -> None:
         self._base_url = base_url
 
@@ -31,9 +27,16 @@ class GPlay:
         )
 
         return response
-    
-    def _request_top(self, chart: str, category: str, length: int,):
-        inner = json.dumps([[None, [[None, [None, length]], None, None, [113]], [2, chart, category]]])
+
+    def _request_top(
+        self,
+        chart: str,
+        category: str,
+        length: int,
+    ):
+        inner = json.dumps(
+            [[None, [[None, [None, length]], None, None, [113]], [2, chart, category]]]
+        )
 
         data = f"f.req={json.dumps([[['vyAe2', inner]]])}"
 
@@ -63,7 +66,7 @@ class GPlay:
             "authuser": "0",
             "_reqid": "68744",
         }
-        
+
         return self._request(params=params, headers=headers, data=data)
 
     def _parse_response(self, content: str):
@@ -71,34 +74,38 @@ class GPlay:
         apps = []
         for app_num, app_data in enumerate(app_entries):
             data = app_data[0]
-            
+
             app = ChartApplication(
-                id=data[0][0], 
-                icon_url= data[1][3][2],
+                id=data[0][0],
+                icon_url=data[1][3][2],
                 screenshot_urls=[i[3][2] for i in data[2]],
-                name= data[3],
-                rating= data[4][1],
-                category= data[5],
-                price= f"{data[8][1][0][0] / 1e6} {data[8][1][0][1]}",
-                buy_url= data[8][6][5][2],
-                store_path= data[10][4][2],
-                trailer_url= data[12][0][0][3][2] if data[12] else None,
-                description= data[13][1],
-                developer= data[14],
-                downloads= data[15],
-                cover_image_url= data[22][3][2],
+                name=data[3],
+                rating=data[4][1],
+                category=data[5],
+                price=f"{data[8][1][0][0] / 1e6} {data[8][1][0][1]}",
+                buy_url=data[8][6][5][2],
+                store_path=data[10][4][2],
+                trailer_url=data[12][0][0][3][2] if data[12] else None,
+                description=data[13][1],
+                developer=data[14],
+                downloads=data[15],
+                cover_image_url=data[22][3][2],
             )
             print(app)
             apps.append(app)
         return apps
 
-    
-    def fetch_top_charts(self, chart: str, category: str, length: int=50,):
+    def fetch_top_charts(
+        self,
+        chart: str,
+        category: str,
+        length: int = 50,
+    ):
         response = self._request_top(chart=chart, category=category, length=length)
 
         response_content = response.text
 
-        content = json.loads(response_content.split('\n')[2])
+        content = json.loads(response_content.split("\n")[2])
 
         response_content = content[0][2]
         json_content = json.loads(response_content)

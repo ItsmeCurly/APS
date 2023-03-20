@@ -2,13 +2,19 @@ import asyncio
 import click
 from aps.conf import settings
 
+
 @click.group("database")
 def aps_database():
     pass
 
 
 @aps_database.command("init")
-@click.option("-o", "--overwrite",is_flag=True, default=False,)
+@click.option(
+    "-o",
+    "--overwrite",
+    is_flag=True,
+    default=False,
+)
 def initialize_database(overwrite: bool):
     from aps.db.core import engine
     from aps.db.manage import init_database

@@ -20,10 +20,11 @@ def cli(ctx):
 
     app = Application()
     ctx.obj = app
-    
+
     if not ctx.invoked_subcommand:
         print(ctx.get_help())
         return
+
 
 cli.add_command(aps_database)
 cli.add_command(aps_extract)

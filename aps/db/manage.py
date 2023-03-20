@@ -6,6 +6,8 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from aps.conf import settings
 from sqlalchemy.engine.url import make_url
+
+
 async def init_database(
     engine: AsyncEngine,
     overwrite: bool = False,
@@ -19,9 +21,10 @@ async def init_database(
     #     pass
 
     config = Config("alembic.ini")
-    config.attributes['configure_logger'] = False
+    config.attributes["configure_logger"] = False
 
     alembic.command.upgrade(config, "head")
+
 
 async def drop_database(engine):
     from sqlalchemy.orm import close_all_sessions
@@ -33,17 +36,20 @@ async def drop_database(engine):
 
 async def async_create_database(engine: AsyncEngine, encoding="utf8", template=None):
     dialect_name = engine.dialect.name
-    database=engine.url.database
+    database = engine.url.database
 
     print(database)
 
-    if dialect_name == 'postgresql':
+    if dialect_name == "postgresql":
         if not template:
             template = "template1"
-        
+
         text = f"CREATE DATABASE {database} ENCODING '{encoding}' TEMPLATE '{template}'"
 
-        engine = create_async_engine(f"postgresql+asyncpg://{settings.DB_USER}:{settings.DB_PASS}@{settings.DB_HOST}/postgres", isolation_level="AUTOCOMMIT")
+        engine = create_async_engine(
+            f"postgresql+asyncpg://{settings.DB_USER}:{settings.DB_PASS}@{settings.DB_HOST}/postgres",
+            isolation_level="AUTOCOMMIT",
+        )
 
         async with engine.begin() as connection:
             await connection.execute(sa.text(text))
@@ -58,22 +64,23 @@ def _set_url_database(url, database):
         ret = url
     return ret
 
+
 async def async_drop_database(url: sa.URL):
     url = make_url(url)
     database = url.database
     dialect_name = url.get_dialect().name
     dialect_driver = url.get_dialect().driver
 
-    if dialect_name =='postgresql':
-        url = _set_url_database(url, database='postgres')
-    
-    if dialect_name == 'postgresql' and dialect_driver in ["asyncpg"]:
+    if dialect_name == "postgresql":
+        url = _set_url_database(url, database="postgres")
+
+    if dialect_name == "postgresql" and dialect_driver in ["asyncpg"]:
         engine = create_async_engine(url, isolation_level="AUTOCOMMIT")
 
-    if dialect_name == 'postgresql':
+    if dialect_name == "postgresql":
         async with engine.begin() as connection:
             version = connection.dialect.server_version_info
-            pid_column = "pid" if (version >= (9,2)) else "procpid"
+            pid_column = "pid" if (version >= (9, 2)) else "procpid"
             text = f"""
             SELECT pg_terminate_backend(pg_stat_activity.{pid_column})
             FROM pg_stat_activity
@@ -83,5 +90,5 @@ async def async_drop_database(url: sa.URL):
 
             text = f"DROP DATABASE {quote(connection,database)}"
             await connection.execute(sa.text(text))
-    
+
     await engine.dispose()

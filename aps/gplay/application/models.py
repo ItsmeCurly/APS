@@ -4,14 +4,10 @@ from sqlalchemy import Column, Integer
 from aps.db.models.base import Base
 
 
-
-
 class Application(Base):
     __tablename__ = "application"
 
     id = Column(Integer, primary_key=True, index=True)
-
-
 
 
 class ApplicationBase(BaseModel):
@@ -21,6 +17,7 @@ class ApplicationBase(BaseModel):
         from google_play_scraper import reviews_all
 
         return reviews_all(app_id=self.id, sleep_milliseconds=5000)
+
 
 class ChartApplication(ApplicationBase):
     id: str
