@@ -1,10 +1,11 @@
 from copy import copy
-from sqlalchemy.ext.asyncio import AsyncEngine
-from sqlalchemy_utils.functions.orm import quote
+
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import create_async_engine
-from aps.conf import settings
 from sqlalchemy.engine.url import make_url
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy_utils.functions.orm import quote
+
+from aps.conf import settings
 
 
 async def init_database(

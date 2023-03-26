@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: int = logging.INFO
 
     DB_USER: str = "postgres"
-    DB_PASS: str = "postgres"
+    DB_PASS: str = "123456"
     DB_HOST: str = "localhost"
     DB_NAME: str = "aps"
 

@@ -1,12 +1,12 @@
 from threading import Thread
-import anyio
 
+import anyio
+from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
-from alembic import context
-from aps.db.models.base import Base
 from aps.conf import settings
+from aps.db.models.base import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

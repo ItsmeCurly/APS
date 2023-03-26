@@ -1,23 +1,156 @@
+import asyncio
 import json
+from datetime import datetime
+from enum import IntEnum, StrEnum
 from typing import Any
+
 import requests
+from bs4 import BeautifulSoup
+from loguru import logger
 
-from aps.gplay.application.models import ChartApplication
+from aps.db.core import SessionLocal
+from aps.gplay.application.models import (Application, ApplicationModel,
+                                          ChartApplication)
+from aps.gplay.review.models import Review, ReviewModel
+from aps.utils import create_db_obj
+
+BASE_URL = "https://play.google.com"
+APPS_BASE_URL = f"{BASE_URL}/store/apps"
 
 
-class Charts:
+class Cluster(StrEnum):
+    NEW = "new"
+    TOP = "top"
+
+
+class Language(StrEnum):
+    EN = "en"  # English
+
+
+class Country(StrEnum):
+    US = "us"  # United States
+    UK = "gb"  # United Kingdom / Great Britin
+    AU = "au"  # Australia
+    CA = "ca"  # Canada
+    BZ = "bz"  # Belize
+    IE = "ie"  # Ireland
+    JM = "jm"  # Jamaica
+    NZ = "nz"  # New Zealand
+    TT = "tt"  # Trinidad and Tobago
+    ZA = "za"  # South Africa
+    PH = "ph"  # Republic of the Philippines
+    ZW = "zw"  # Zimbabwe
+    CH = "ch"  # Chamorro
+
+
+# LANGUAGE_CODES = f"{lang}-{country}
+
+
+class Category(StrEnum):
+    APPLICATION = "APPLICATION"
+    ANDROID_WEAR = "ANDROID_WEAR"
+    ART_AND_DESIGN = "ART_AND_DESIGN"
+    AUTO_AND_VEHICLES = "AUTO_AND_VEHICLES"
+    BEAUTY = "BEAUTY"
+    BOOKS_AND_REFERENCE = "BOOKS_AND_REFERENCE"
+    BUSINESS = "BUSINESS"
+    COMICS = "COMICS"
+    COMMUNICATION = "COMMUNICATION"
+    DATING = "DATING"
+    EDUCATION = "EDUCATION"
+    ENTERTAINMENT = "ENTERTAINMENT"
+    EVENTS = "EVENTS"
+    FINANCE = "FINANCE"
+    FOOD_AND_DRINK = "FOOD_AND_DRINK"
+    HEALTH_AND_FITNESS = "HEALTH_AND_FITNESS"
+    HOUSE_AND_HOME = "HOUSE_AND_HOME"
+    LIBRARIES_AND_DEMO = "LIBRARIES_AND_DEMO"
+    LIFESTYLE = "LIFESTYLE"
+    MAPS_AND_NAVIGATION = "MAPS_AND_NAVIGATION"
+    MEDICAL = "MEDICAL"
+    MUSIC_AND_AUDIO = "MUSIC_AND_AUDIO"
+    NEWS_AND_MAGAZINES = "NEWS_AND_MAGAZINES"
+    PARENTING = "PARENTING"
+    PERSONALIZATION = "PERSONALIZATION"
+    PHOTOGRAPHY = "PHOTOGRAPHY"
+    PRODUCTIVITY = "PRODUCTIVITY"
+    SHOPPING = "SHOPPING"
+    SOCIAL = "SOCIAL"
+    SPORTS = "SPORTS"
+    TOOLS = "TOOLS"
+    TRAVEL_AND_LOCAL = "TRAVEL_AND_LOCAL"
+    VIDEO_PLAYERS = "VIDEO_PLAYERS"
+    WATCH_FACE = "WATCH_FACE"
+    WEATHER = "WEATHER"
+    GAME = "GAME"
+    GAME_ACTION = "GAME_ACTION"
+    GAME_ADVENTURE = "GAME_ADVENTURE"
+    GAME_ARCADE = "GAME_ARCADE"
+    GAME_BOARD = "GAME_BOARD"
+    GAME_CARD = "GAME_CARD"
+    GAME_CASINO = "GAME_CASINO"
+    GAME_CASUAL = "GAME_CASUAL"
+    GAME_EDUCATIONAL = "GAME_EDUCATIONAL"
+    GAME_MUSIC = "GAME_MUSIC"
+    GAME_PUZZLE = "GAME_PUZZLE"
+    GAME_RACING = "GAME_RACING"
+    GAME_ROLE_PLAYING = "GAME_ROLE_PLAYING"
+    GAME_SIMULATION = "GAME_SIMULATION"
+    GAME_SPORTS = "GAME_SPORTS"
+    GAME_STRATEGY = "GAME_STRATEGY"
+    GAME_TRIVIA = "GAME_TRIVIA"
+    GAME_WORD = "GAME_WORD"
+    FAMILY = "FAMILY"
+
+
+class Collection(StrEnum):
     TOP_FREE = "topselling_free"
-    TOP_GROSS = "topgrossing"
-    TOP_SELL = "topselling_paid"
+    TOP_PAID = "topselling_paid"
+    GROSSING = "topgrossing"
+    TRENDING = "movers_shakers"
+    TOP_FREE_GAMES = "topselling_free_games"
+    TOP_PAID_GAMES = "topselling_paid_games"
+    TOP_GROSSING_GAMES = "topselling_grossing_games"
+    NEW_FREE = "topselling_new_free"
+    NEW_PAID = "topselling_new_paid"
+    NEW_FREE_GAMES = "topselling_new_free_games"
+    NEW_PAID_GAMES = "topselling_new_paid_games"
+
+
+class Sort(IntEnum):
+    NEWEST = 2
+    RATING = 3
+    HELPFULNESS = 1
+
+
+class Age(StrEnum):
+    FIVE_UNDER = "AGE_RANGE1"
+    SIX_EIGHT = "AGE_RANGE2"
+    NINE_UP = "AGE_RANGE3"
+
+
+class Permission(IntEnum):
+    COMMON = 0
+    OTHER = 1
 
 
 class GPlay:
-    charts = Charts()
+    cluster = Cluster
+    language = Language
+    country = Country
+    category = Category
+    collection = Collection
+    sort = Sort
+    age = Age
+    permission = Permission
 
     def __init__(self, base_url: str = "https://play.google.com") -> None:
         self._base_url = base_url
 
-    def _request(self, params: dict[str, Any], headers: dict[str, Any], data: Any):
+    async def _request_batchexecute(
+        self, params: dict[str, Any], headers: dict[str, Any], data: Any
+    ):
+        # TODO: async
         response = requests.post(
             f"{self._base_url}/_/PlayStoreUi/data/batchexecute",
             params=params,
@@ -28,14 +161,21 @@ class GPlay:
 
         return response
 
-    def _request_top(
+    async def _request_top(
         self,
-        chart: str,
+        collection: str,
         category: str,
+        language: str,
         length: int,
     ):
         inner = json.dumps(
-            [[None, [[None, [None, length]], None, None, [113]], [2, chart, category]]]
+            [
+                [
+                    None,
+                    [[None, [None, length]], None, None, [113]],
+                    [2, collection, category],
+                ]
+            ]
         )
 
         data = f"f.req={json.dumps([[['vyAe2', inner]]])}"
@@ -62,17 +202,19 @@ class GPlay:
             "source-path": "/store/apps",
             "f.sid": "3985578500523740800",
             "bl": "boq_playuiserver_20230314.03_p0",
-            "hl": "en",
+            "hl": language,
             "authuser": "0",
             "_reqid": "68744",
         }
 
-        return self._request(params=params, headers=headers, data=data)
+        return await self._request_batchexecute(
+            params=params, headers=headers, data=data
+        )
 
-    def _parse_response(self, content: str):
+    async def _parse_response(self, content: str) -> list[ChartApplication]:
         app_entries = content[0][1][0][28][0]
         apps = []
-        for app_num, app_data in enumerate(app_entries):
+        for _, app_data in enumerate(app_entries):
             data = app_data[0]
 
             app = ChartApplication(
@@ -91,17 +233,79 @@ class GPlay:
                 downloads=data[15],
                 cover_image_url=data[22][3][2],
             )
-            print(app)
             apps.append(app)
         return apps
 
-    def fetch_top_charts(
+    async def build_application_data(
+        self, app_id: str, load_reviews: bool = True
+    ) -> ApplicationModel:
+        """
+        Builds application models and database objects
+
+        Args:
+            app_id (str): The app id on Google Play
+            load_reviews (bool, optional): Whether to also load the reviews of the application. Defaults to True.
+
+        Returns:
+            ApplicationModel: A data model of the Application
+        """
+
+        import google_play_scraper
+
+        app_ = google_play_scraper.app(app_id)
+
+        if "released" in app_:
+            app_["released"] = datetime.strptime(app_["released"], "%b %d, %Y")
+        if "updated" in app_:
+            app_["updated"] = datetime.fromtimestamp(app_["updated"])
+
+        app = ApplicationModel(**app_)
+
+        session = SessionLocal()
+        await create_db_obj(db_session=session, model_class=Application, obj=app)
+
+        if load_reviews:
+            logger.info(
+                f"Begin loading reviews for {app.app_id} from Google Play, this may take some time..."
+            )
+            async for reviews in app.reviews_all():
+                logger.info(f"{len(reviews)}")
+                reviews = [
+                    ReviewModel(app_id=app.app_id, **review) for review in reviews
+                ]
+
+                for review in reviews:
+                    await create_db_obj(
+                        db_session=session, model_class=Review, obj=review
+                    )
+            logger.info(f"End loading reviews for {app.app_id}")
+
+        return app
+
+    async def fetch_top_charts(
         self,
-        chart: str,
+        collection: str,
         category: str,
+        language: str,
         length: int = 50,
-    ):
-        response = self._request_top(chart=chart, category=category, length=length)
+    ) -> list[ApplicationModel]:
+        """
+        Fetches the top apps from the specified collection and category
+
+        Args:
+            collection (str): The collection, from gplay.collection
+            category (str): The category, from gplay.category
+            language (str): The language, from gplay.language
+            length (int, optional): The length to pull from top charts, maxes at 660 due to API limitations. Defaults
+            to 50.
+
+        Returns:
+            list[ApplicationModel]: A list of the found applications in the top charts
+        """
+
+        response = await self._request_top(
+            collection=collection, category=category, language=language, length=length
+        )
 
         response_content = response.text
 
@@ -110,4 +314,91 @@ class GPlay:
         response_content = content[0][2]
         json_content = json.loads(response_content)
 
-        return self._parse_response(json_content)
+        apps = await self._parse_response(json_content)
+
+        models = []
+        for app in apps:
+            models.append(await self.build_application_data(app.app_id))
+        return models
+
+    async def fetch_similar(self, app: ApplicationModel) -> list[ApplicationModel]:
+        """
+        Fetches similar apps to the specified app
+
+        Args:
+            app (ApplicationModel): The app data model
+
+        Returns:
+            list[ApplicationModel]: A list of similar apps to the original app
+        """
+
+        resp = requests.get(self._base_url + await app.similar_cluster())
+
+        soup = BeautifulSoup(resp.text, "lxml")
+
+        apps = []
+        for a in soup.find_all("a"):
+            if "/store/apps/details?id=" in a["href"]:
+                app_id = a["href"].replace("/store/apps/details?id=", "")
+
+                apps.append(await self.build_application_data(app_id=app_id))
+        return apps
+
+    async def fetch_all(self):
+        """
+        Fetches all apps from all categories and collections
+        """
+        for collection in self.collection:
+            for category in self.category:
+                length = 250
+                logger.info(
+                    f"Extracting top {length} from {collection} / {category} with language {self.language.EN}"
+                )
+                apps = await self.fetch_top_charts(
+                    collection=collection,
+                    category=category,
+                    language=self.language.EN,
+                    length=length,
+                )
+
+                logger.info(f"Found {len(apps)} apps")
+
+    async def fetch_all_recursive(self):
+        """
+        Fetches all apps from all categories and collections, along with recursively descending similar apps to all
+        apps. Should be a fairly exhaustive search.
+        """
+
+        apps_searched = []
+
+        to_search_similar = []
+        gp = GPlay()
+        for collection in gp.collection:
+            for category in gp.category:
+                length = 250
+                logger.info(
+                    f"Extracting top {length} from {collection} / {category} with language {gp.language.EN}"
+                )
+                apps = await self.fetch_top_charts(
+                    collection=collection,
+                    category=category,
+                    language=self.language.EN,
+                    length=length,
+                )
+
+                logger.info(f"Found {len(apps)} apps")
+
+                to_search_similar.append([app.app_id for app in apps])
+                while len(to_search_similar) > 0:
+                    app = to_search_similar.pop()
+                    if app.app_id in apps_searched:
+                        continue
+                    logger.info(f"Finding similar apps to {app.app_id}")
+                    similar_apps = await self.fetch_similar(app)
+                    logger.info(
+                        f"Found {len(similar_apps)} similar apps to {app.app_id}"
+                    )
+                    to_search_similar.append([app.app_id for app in similar_apps])
+
+                    apps_searched.append(app.app_id)
+                    await asyncio.sleep(15)

@@ -4,7 +4,6 @@ from sqlalchemy.pool import NullPool
 
 from aps.conf import settings
 
-
 engine = create_async_engine(
     settings.SQLALCHEMY_DATABASE_URI, pool_pre_ping=True, poolclass=NullPool
 )

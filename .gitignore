@@ -1,7 +1,7 @@
 env/
 *.log
 chromedriver.exe
-
+.ruff_cache
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
