@@ -26,3 +26,22 @@ def gplay(recursive: bool):
         asyncio.run(gp.fetch_all_recursive())
     else:
         asyncio.run(gp.fetch_all())
+
+
+
+@aps_extract.command("appstore")
+@click.option(
+    "-r",
+    "--recursive",
+    is_flag=True,
+    default=False,
+)
+def appstore(recursive: bool):
+    from aps.appstore import AppStore
+
+    appstore = AppStore()
+    if recursive:
+        asyncio.run(appstore.fetch_all_recursive())
+    else:
+        asyncio.run(appstore.fetch_all())
+

@@ -7,8 +7,8 @@ from sqlalchemy.orm import relationship
 from aps.db.models.base import Base
 
 
-class Review(Base):
-    __tablename__ = "review"
+class GPlayReview(Base):
+    __tablename__ = "gplay_review"
 
     review_id = Column(String, primary_key=True, unique=True)
     username = Column(String)
@@ -21,11 +21,11 @@ class Review(Base):
     reply_content = Column(String)
     reply_at = Column(DateTime)
 
-    app_id = Column(String, ForeignKey("application.app_id"))
-    app = relationship("Application", backref="application", foreign_keys=[app_id])
+    app_id = Column(String, ForeignKey("gplay_app.app_id"))
+    app = relationship("GPlayApp", backref="reviews", foreign_keys=[app_id])
 
 
-class ReviewModel(BaseModel):
+class GPlayReviewModel(BaseModel):
     review_id: str | None = Field(None, alias="reviewId")
     username: str | None = Field(None, alias="userName")
     user_image: str | None = Field(None, alias="userImage")

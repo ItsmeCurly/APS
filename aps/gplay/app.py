@@ -9,8 +9,8 @@ from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String
 from aps.db.models.base import Base
 
 
-class Application(Base):
-    __tablename__ = "application"
+class GPlayApp(Base):
+    __tablename__ = "gplay_app"
 
     app_id = Column(String, primary_key=True, unique=True)
     title = Column(String)
@@ -46,7 +46,7 @@ class Application(Base):
     url = Column(String)
 
 
-class ApplicationBase(BaseModel):
+class GPlayAppBase(BaseModel):
     app_id: str | None = Field(None, alias="id")
 
     async def reviews_all(self, sleep_milliseconds: int = 0, **kwargs) -> list:
@@ -89,7 +89,7 @@ class ApplicationBase(BaseModel):
                 return a["href"]
 
 
-class ApplicationModel(ApplicationBase):
+class GPlayAppModel(GPlayAppBase):
     app_id: str | None = Field(None, alias="appId")
     title: str | None = Field(None, alias="title")
     description: str | None = Field(None, alias="description")
@@ -124,7 +124,7 @@ class ApplicationModel(ApplicationBase):
     url: str | None = Field(None, alias="url")
 
 
-class ChartApplication(ApplicationBase):
+class ChartApplication(GPlayAppBase):
     id: str | None = Field(None, alias="id")
     icon_url: str | None = Field(None, alias="icon_url")
     screenshot_urls: list[str]

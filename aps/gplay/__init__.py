@@ -9,9 +9,9 @@ from bs4 import BeautifulSoup
 from loguru import logger
 
 from aps.db.core import SessionLocal
-from aps.gplay.application.models import (Application, ApplicationModel,
+from aps.gplay.app import (GPlayApp, GPlayAppModel,
                                           ChartApplication)
-from aps.gplay.review.models import Review, ReviewModel
+from aps.gplay.review import GPlayReview, GPlayReviewModel
 from aps.utils import create_db_obj
 
 BASE_URL = "https://play.google.com"
@@ -238,7 +238,7 @@ class GPlay:
 
     async def build_application_data(
         self, app_id: str, load_reviews: bool = True
-    ) -> ApplicationModel:
+    ) -> GPlayAppModel:
         """
         Builds application models and database objects
 
@@ -247,7 +247,7 @@ class GPlay:
             load_reviews (bool, optional): Whether to also load the reviews of the application. Defaults to True.
 
         Returns:
-            ApplicationModel: A data model of the Application
+            GPlayAppModel: A data model of the Application
         """
 
         import google_play_scraper
@@ -259,10 +259,10 @@ class GPlay:
         if "updated" in app_:
             app_["updated"] = datetime.fromtimestamp(app_["updated"])
 
-        app = ApplicationModel(**app_)
+        app = GPlayAppModel(**app_)
 
         session = SessionLocal()
-        await create_db_obj(db_session=session, model_class=Application, obj=app)
+        await create_db_obj(db_session=session, model_class=GPlayApp, obj=app)
 
         if load_reviews:
             logger.info(
@@ -271,12 +271,12 @@ class GPlay:
             async for reviews in app.reviews_all():
                 logger.info(f"{len(reviews)}")
                 reviews = [
-                    ReviewModel(app_id=app.app_id, **review) for review in reviews
+                    GPlayReviewModel(app_id=app.app_id, **review) for review in reviews
                 ]
 
                 for review in reviews:
                     await create_db_obj(
-                        db_session=session, model_class=Review, obj=review
+                        db_session=session, model_class=GPlayReview, obj=review
                     )
             logger.info(f"End loading reviews for {app.app_id}")
 
@@ -288,7 +288,7 @@ class GPlay:
         category: str,
         language: str,
         length: int = 50,
-    ) -> list[ApplicationModel]:
+    ) -> list[GPlayAppModel]:
         """
         Fetches the top apps from the specified collection and category
 
@@ -300,7 +300,7 @@ class GPlay:
             to 50.
 
         Returns:
-            list[ApplicationModel]: A list of the found applications in the top charts
+            list[GPlayAppModel]: A list of the found applications in the top charts
         """
 
         response = await self._request_top(
@@ -321,15 +321,15 @@ class GPlay:
             models.append(await self.build_application_data(app.app_id))
         return models
 
-    async def fetch_similar(self, app: ApplicationModel) -> list[ApplicationModel]:
+    async def fetch_similar(self, app: GPlayAppModel) -> list[GPlayAppModel]:
         """
         Fetches similar apps to the specified app
 
         Args:
-            app (ApplicationModel): The app data model
+            app (GPlayAppModel): The app data model
 
         Returns:
-            list[ApplicationModel]: A list of similar apps to the original app
+            list[GPlayAppModel]: A list of similar apps to the original app
         """
 
         resp = requests.get(self._base_url + await app.similar_cluster())
