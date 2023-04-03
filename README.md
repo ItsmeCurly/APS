@@ -23,3 +23,5 @@ To extract all possible apps and reviews, call `aps extract gplay --recursive` f
 
 
 ## TODO: ITunes
+
+To extract all possible apps and reviews, call `aps extract appstore --recursive` from the CLI.
