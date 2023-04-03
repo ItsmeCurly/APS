@@ -1,18 +1,18 @@
 import logging
 import random
 import re
-import requests
 import sys
 import time
 from datetime import datetime
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+
+import requests
 
 logger = logging.getLogger("Base")
 
 
 # Pulled from app-store-scraper, as that does not work with the project setup
 # Unused
+
 
 class Base:
     _scheme = "https"
@@ -121,7 +121,7 @@ class Base:
             request_offset = int(offset)
         return request_offset
 
-    def review(self, how_many=sys.maxsize, after=None, sleep: int=5):
+    def review(self, how_many=sys.maxsize, after=None, sleep: int = 5):
         if after and not isinstance(after, datetime):
             raise SystemExit("`after` must be a datetime object.")
         reviews_all = []

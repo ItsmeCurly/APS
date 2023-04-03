@@ -50,8 +50,7 @@ class GPlayAppBase(BaseModel):
     app_id: str | None = Field(None, alias="id")
 
     async def reviews_all(self, sleep_milliseconds: int = 0, **kwargs) -> list:
-        from google_play_scraper.features.reviews import (MAX_COUNT_EACH_FETCH,
-                                                          reviews)
+        from google_play_scraper.features.reviews import MAX_COUNT_EACH_FETCH, reviews
 
         kwargs.pop("count", None)
         kwargs.pop("continuation_token", None)

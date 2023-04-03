@@ -9,8 +9,7 @@ from bs4 import BeautifulSoup
 from loguru import logger
 
 from aps.db.core import SessionLocal
-from aps.gplay.app import (GPlayApp, GPlayAppModel,
-                                          ChartApplication)
+from aps.gplay.app import ChartApplication, GPlayApp, GPlayAppModel
 from aps.gplay.review import GPlayReview, GPlayReviewModel
 from aps.utils import create_db_obj
 

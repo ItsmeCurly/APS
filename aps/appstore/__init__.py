@@ -1,24 +1,19 @@
-import asyncio
-import json
-from datetime import datetime
-from enum import IntEnum, StrEnum
 import re
-from typing import Any
+from enum import StrEnum
 
 import requests
 from bs4 import BeautifulSoup
 from loguru import logger
-from aps.appstore.app import AppStoreApp
-from aps.appstore.review import AppStoreReview
-
-from aps.db.core import SessionLocal
-from aps.gplay.app import GPlayApp, GPlayAppModel, ChartApplication
-from aps.gplay.review import GPlayReview, GPlayReviewModel
-from aps.utils import create_db_obj
 from sqlalchemy import select
 
+from aps.appstore.app import AppStoreApp
+from aps.appstore.review import AppStoreReview
+from aps.db.core import SessionLocal
+from aps.gplay.app import GPlayAppModel
+from aps.utils import create_db_obj
 
 pat = re.compile(r"https:\/\/apps\.apple\.com\/us\/app\/([^\/]*)\/id([\d]+)")
+
 
 class Platform(StrEnum):
     IPAD = "ipad"
@@ -82,9 +77,12 @@ class Chart(StrEnum):
     TOP_PAID = "top-paid"
 
 
-
 class AppStore:
-    def __init__(self, base_apps_url: str = "https://apps.apple.com", base_itunes_url: str = "https://itunes.apple.com",) -> None:
+    def __init__(
+        self,
+        base_apps_url: str = "https://apps.apple.com",
+        base_itunes_url: str = "https://itunes.apple.com",
+    ) -> None:
         self._base_apps_url = base_apps_url
         self._base_itunes_url = base_itunes_url
 
@@ -112,20 +110,20 @@ class AppStore:
             requests.Response: Response from the appstore
         """
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/111.0',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-            'Sec-Fetch-Dest': 'document',
-            'Sec-Fetch-Mode': 'navigate',
-            'Sec-Fetch-Site': 'none',
-            'Sec-Fetch-User': '?1',
-            'DNT': '1',
-            'Sec-GPC': '1',
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/111.0",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "DNT": "1",
+            "Sec-GPC": "1",
         }
 
         params = {
-            'chart': chart,
+            "chart": chart,
         }
 
         if category_params:
@@ -133,7 +131,7 @@ class AppStore:
                 for pk, pv in param.split("="):
                     params[pk] = pv
 
-        req_url = f'https://apps.apple.com/{country}/charts/{platform}/{category_name}/{category_id}'
+        req_url = f"https://apps.apple.com/{country}/charts/{platform}/{category_name}/{category_id}"
         response = requests.get(
             req_url,
             params=params,
@@ -186,15 +184,14 @@ class AppStore:
 
         urls = []
         for a in soup.find_all("a"):
-            if "/app/" in a['href']:
-                urls.append(a['href'])
-        
+            if "/app/" in a["href"]:
+                urls.append(a["href"])
+
         for url in urls:
             matches = re.match(pat, url)
-            
-            app_name = matches.group(1)
-            app_id = matches.group(2)
 
+            matches.group(1)
+            matches.group(2)
 
     async def fetch_similar(self, app: GPlayAppModel) -> list[GPlayAppModel]:
         """Not currently implemented :)"""
@@ -211,19 +208,30 @@ class AppStore:
         for category in constants.Category:
             for collection in constants.Collection:
                 for country in constants.Country:
-                    print(f"Retrieving {limit} apps from {category=} / {collection=} / {country=}")
-                    apps = await apps_all(category=category, limit=limit, country=country, collection=collection)
+                    print(
+                        f"Retrieving {limit} apps from {category=} / {collection=} / {country=}"
+                    )
+                    apps = await apps_all(
+                        category=category,
+                        limit=limit,
+                        country=country,
+                        collection=collection,
+                    )
 
                     for app in apps:
-                        result = await session.execute(select(AppStoreApp).where(AppStoreApp.app_id == app.app_id))
+                        result = await session.execute(
+                            select(AppStoreApp).where(AppStoreApp.app_id == app.app_id)
+                        )
                         db_obj = result.scalars().first()
 
                         if db_obj:
                             logger.info(f"App {app.app_id} already processed, skipping")
                             continue
 
-                        await create_db_obj(db_session=session, model_class=AppStoreApp, obj=app)
-                        
+                        await create_db_obj(
+                            db_session=session, model_class=AppStoreApp, obj=app
+                        )
+
                         if load_reviews:
                             for sort in constants.Sort:
                                 reviews = await app.reviews_all(sort=sort)
@@ -233,13 +241,23 @@ class AppStore:
                                     break
 
                                 for review in reviews:
-                                    result = await session.execute(select(AppStoreReview).where(AppStoreReview.review_id == review.review_id))
+                                    result = await session.execute(
+                                        select(AppStoreReview).where(
+                                            AppStoreReview.review_id == review.review_id
+                                        )
+                                    )
                                     db_obj = result.scalars().first()
 
                                     if db_obj:
-                                        logger.info(f"Review {review.review_id} already processed, skipping")
+                                        logger.info(
+                                            f"Review {review.review_id} already processed, skipping"
+                                        )
                                         continue
-                                    await create_db_obj(db_session=session, model_class=AppStoreReview, obj=review)
+                                    await create_db_obj(
+                                        db_session=session,
+                                        model_class=AppStoreReview,
+                                        obj=review,
+                                    )
 
     async def fetch_all_recursive(self):
         """Not currently implemented :)"""

@@ -1,4 +1,5 @@
 from typing import MutableMapping
+
 from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,8 +29,7 @@ async def create_db_obj(db_session: AsyncSession, model_class, obj: BaseModel):
         await db_session.rollback()
 
 
-
-def flatten(d, parent_key='', sep='_'):
+def flatten(d, parent_key="", sep="_"):
     items = []
     for k, v in d.items():
         new_key = parent_key + sep + k if parent_key else k

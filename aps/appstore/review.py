@@ -1,18 +1,13 @@
 from typing import Any
-from aps.appstore import constants
-from pydantic import BaseModel, conint
+
 import requests
-
-from aps.db.core import SessionLocal
-
-from datetime import datetime
-
 from pydantic import BaseModel, Field
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
+from aps.appstore import constants
 from aps.db.models.base import Base
-from aps.utils import create_db_obj, flatten
+from aps.utils import flatten
 
 
 class AppStoreReview(Base):
@@ -76,7 +71,6 @@ async def reviews_all(
     country: str,
     sort: str = constants.Sort.HELPFUL,
 ) -> Any:
-
     opts = _ReqOptions(
         app_id=app_id,
         country=country,
@@ -90,14 +84,14 @@ async def reviews_all(
         resp = requests.get(
             f"https://itunes.apple.com/{opts.country}/rss/customerreviews/page={page}/id={opts.app_id}/{sort}/json"
         )
-        if 'entry' in resp.json()['feed']:
+        if "entry" in resp.json()["feed"]:
             js = resp.json()["feed"]["entry"]
         else:
             return reviews
-        
+
         for review in js:
             flat_review = flatten(review)
-            
+
             review = AppStoreReviewModel(**flat_review)
 
             reviews.append(review)

@@ -28,7 +28,6 @@ def gplay(recursive: bool):
         asyncio.run(gp.fetch_all())
 
 
-
 @aps_extract.command("appstore")
 @click.option(
     "-r",
@@ -44,4 +43,3 @@ def appstore(recursive: bool):
         asyncio.run(appstore.fetch_all_recursive())
     else:
         asyncio.run(appstore.fetch_all())
-

@@ -1,21 +1,13 @@
-import asyncio
-from datetime import datetime
-
 import requests
 from bs4 import BeautifulSoup
-from pydantic import BaseModel, Field
-from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String
-
-from aps.db.models.base import Base
-
-from typing import Any
-from aps.appstore import constants
-from pydantic import BaseModel, conint
-import requests
-
 from loguru import logger
+from pydantic import BaseModel, Field, conint
+from sqlalchemy import Column, String
 
+from aps.appstore import constants
+from aps.db.models.base import Base
 from aps.utils import flatten
+
 
 class AppStoreApp(Base):
     __tablename__ = "appstore_app"
@@ -40,9 +32,9 @@ class AppStoreAppBase(BaseModel):
     app_id: str
     app_name: str
 
-    async def reviews_all(self, sort: constants.Sort=constants.Sort.HELPFUL) -> list:
+    async def reviews_all(self, sort: constants.Sort = constants.Sort.HELPFUL) -> list:
         from aps.appstore.review import reviews_all
-        
+
         logger.info(f"Retrieving reviews from {self.app_id} {sort=}")
 
         return await reviews_all(app_id=self.app_id, country="us")
@@ -98,20 +90,27 @@ async def apps_all(
     country: str,
     collection: str = constants.Collection.TOP_FREE_IOS,
 ) -> list[AppStoreAppModel]:
-    opts = ReqOptions(collection=collection, category=category, limit=limit, country=country,)
+    opts = ReqOptions(
+        collection=collection,
+        category=category,
+        limit=limit,
+        country=country,
+    )
 
     logger.info(f"Retrieving apps with options {opts}")
 
     category = f"/genre={opts.category}" or ""
 
-    resp = requests.get(f"http://ax.itunes.apple.com/WebObjects/MZStoreServices.woa/ws/RSS/{opts.collection}/{category}/limit={opts.limit}/json?s={opts.market}")
+    resp = requests.get(
+        f"http://ax.itunes.apple.com/WebObjects/MZStoreServices.woa/ws/RSS/{opts.collection}/{category}/limit={opts.limit}/json?s={opts.market}"
+    )
 
     content = resp.json()["feed"]["entry"]
     apps = []
 
     for app in content:
         flat_app = flatten(app)
-        
+
         app = AppStoreAppModel(**flat_app)
 
         apps.append(app)
