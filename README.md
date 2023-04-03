@@ -22,6 +22,6 @@ View /examples for some usage examples.
 To extract all possible apps and reviews, call `aps extract gplay --recursive` from the CLI.
 
 
-## TODO: ITunes
+## Appstore Applications and Reviews
 
 To extract all possible apps and reviews, call `aps extract appstore --recursive` from the CLI.
