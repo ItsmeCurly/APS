@@ -4,7 +4,7 @@ from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
 from pydantic import BaseModel, Field
-from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, BigInteger
 
 from aps.db.models.base import Base
 
@@ -17,11 +17,11 @@ class GPlayApp(Base):
     description = Column(String)
     summary = Column(String)
     installs = Column(String)
-    min_installs = Column(Integer)
-    real_installs = Column(Integer)
+    min_installs = Column(BigInteger)
+    real_installs = Column(BigInteger)
     score = Column(Float)
-    num_ratings = Column(Integer)
-    num_reviews = Column(Integer)
+    num_ratings = Column(BigInteger)
+    num_reviews = Column(BigInteger)
     price = Column(Float)
     free = Column(Boolean)
     currency = Column(String)

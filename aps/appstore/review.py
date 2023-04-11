@@ -51,21 +51,6 @@ class _ReqOptions(BaseModel):
         return constants.Markets[self.country.upper()]
 
 
-# async def reviews(
-#     category: int,
-#     limit: int,
-#     country: str,
-#     collection: str = constants.Collection.TOP_FREE_IOS,
-# ) -> Any:
-#     opts = _ReqOptions(collection=collection, category=category, limit=limit, country=country,)
-
-#     sort = "/sortby=${opts.sort}" or ""
-
-#     resp = requests.get(f"https://itunes.apple.com/{opts.country}/rss/customerreviews/page={page}/id=${opts.app_id}/{sort}/json")
-
-#     return resp.json()['feed']['entry']
-
-
 async def reviews_all(
     app_id: int,
     country: str,
@@ -84,6 +69,8 @@ async def reviews_all(
         resp = requests.get(
             f"https://itunes.apple.com/{opts.country}/rss/customerreviews/page={page}/id={opts.app_id}/{sort}/json"
         )
+        if resp.status_code != 200:
+            return reviews
         if "entry" in resp.json()["feed"]:
             js = resp.json()["feed"]["entry"]
         else:

@@ -7,6 +7,7 @@ from typing import Any
 import requests
 from bs4 import BeautifulSoup
 from loguru import logger
+from sqlalchemy import select
 
 from aps.db.core import SessionLocal
 from aps.gplay.app import ChartApplication, GPlayApp, GPlayAppModel
@@ -316,7 +317,16 @@ class GPlay:
         apps = await self._parse_response(json_content)
 
         models = []
+        session = SessionLocal()
         for app in apps:
+            result = await session.execute(
+                select(GPlayApp).where(GPlayApp.app_id == app.app_id)
+            )
+            db_obj = result.scalars().first()
+
+            if db_obj:
+                logger.info(f"App {app.app_id} already processed, skipping")
+                continue
             models.append(await self.build_application_data(app.app_id))
         return models
 
@@ -368,7 +378,7 @@ class GPlay:
         apps. Should be a fairly exhaustive search.
         """
 
-        apps_searched = []
+        session = SessionLocal()
 
         to_search_similar = []
         gp = GPlay()
@@ -390,14 +400,20 @@ class GPlay:
                 to_search_similar.append([app.app_id for app in apps])
                 while len(to_search_similar) > 0:
                     app = to_search_similar.pop()
-                    if app.app_id in apps_searched:
+
+                    result = await session.execute(
+                        select(GPlayApp).where(GPlayApp.app_id == app.app_id)
+                    )
+                    db_obj = result.scalars().first()
+
+                    if db_obj:
+                        logger.info(f"App {app.app_id} already processed, skipping")
                         continue
+
                     logger.info(f"Finding similar apps to {app.app_id}")
                     similar_apps = await self.fetch_similar(app)
                     logger.info(
                         f"Found {len(similar_apps)} similar apps to {app.app_id}"
                     )
                     to_search_similar.append([app.app_id for app in similar_apps])
-
-                    apps_searched.append(app.app_id)
                     await asyncio.sleep(15)

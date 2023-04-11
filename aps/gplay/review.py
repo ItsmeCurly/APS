@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from pydantic import BaseModel, Field
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from aps.db.models.base import Base
@@ -15,7 +15,7 @@ class GPlayReview(Base):
     user_image = Column(String)
     content = Column(String)
     score = Column(Integer)
-    thumbs_up_count = Column(Integer)
+    thumbs_up_count = Column(BigInteger)
     review_created_version = Column(String)
     posted_at = Column(DateTime)
     reply_content = Column(String)

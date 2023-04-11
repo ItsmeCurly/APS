@@ -1,5 +1,7 @@
 # Application Privacy Sentiment
 
+Project requires Python 3.10+
+
 ## Build the project
 
 Make sure Poetry is installed, to install it call `curl -sSL https://install.python-poetry.org | python -` and ensure Poetry is added to the environment variables.
