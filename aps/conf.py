@@ -4,7 +4,7 @@ from pydantic import BaseSettings
 
 
 class Settings(BaseSettings):
-    LOG_LEVEL: int = logging.INFO
+    LOG_LEVEL: int = logging.DEBUG
 
     DB_USER: str = "postgres"
     DB_PASS: str = "123456"

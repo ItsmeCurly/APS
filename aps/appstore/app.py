@@ -12,7 +12,11 @@ from aps.utils import flatten
 class AppStoreApp(Base):
     __tablename__ = "appstore_app"
 
-    app_id = Column(String, primary_key=True, unique=True)
+    app_id = Column(
+        String,
+        primary_key=True,
+        unique=True,
+    )
     app_name = Column(String)
     summary = Column(String)
     price = Column(String)
@@ -105,7 +109,10 @@ async def apps_all(
         f"http://ax.itunes.apple.com/WebObjects/MZStoreServices.woa/ws/RSS/{opts.collection}/{category}/limit={opts.limit}/json?s={opts.market}"
     )
 
+    if "entry" not in resp.json()["feed"]:
+        return []
     content = resp.json()["feed"]["entry"]
+
     apps = []
 
     for app in content:

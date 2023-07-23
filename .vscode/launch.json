@@ -5,12 +5,36 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Module",
+            "name": "Python: Extract GPlay",
+            "type": "python",
+            "request": "launch",
+            "module": "aps",
+            "justMyCode": true,
+            "args": ["extract", "gplay"]
+        },
+        {
+            "name": "Python: Extract Appstore",
             "type": "python",
             "request": "launch",
             "module": "aps",
             "justMyCode": true,
             "args": ["extract", "appstore"]
+        },
+        {
+            "name": "Python: Initialize Database",
+            "type": "python",
+            "request": "launch",
+            "module": "aps",
+            "justMyCode": true,
+            "args": ["database", "init"]
+        },
+        {
+            "name": "Python: Drop Database",
+            "type": "python",
+            "request": "launch",
+            "module": "aps",
+            "justMyCode": true,
+            "args": ["database", "drop"]
         }
     ]
 }

@@ -44,10 +44,11 @@ class GPlayApp(Base):
     updated = Column(DateTime)
     version = Column(String)
     url = Column(String)
+    app_category = Column(String)
 
 
 class GPlayAppBase(BaseModel):
-    app_id: str | None = Field(None, alias="id")
+    app_id: str = Field(..., alias="id")
 
     async def reviews_all(self, sleep_milliseconds: int = 0, **kwargs) -> list:
         from google_play_scraper.features.reviews import MAX_COUNT_EACH_FETCH, reviews
@@ -121,12 +122,13 @@ class GPlayAppModel(GPlayAppBase):
     updated: datetime | None = Field(None, alias="updated")
     version: str | None = Field(None, alias="version")
     url: str | None = Field(None, alias="url")
+    app_category: str | None = Field(None, alias="app_category")
 
 
 class ChartApplication(GPlayAppBase):
     id: str | None = Field(None, alias="id")
     icon_url: str | None = Field(None, alias="icon_url")
-    screenshot_urls: list[str]
+    screenshot_urls: list[str] | None
     name: str | None = Field(None, alias="name")
     rating: float | None = Field(None, alias="rating")
     category: str | None = Field(None, alias="category")

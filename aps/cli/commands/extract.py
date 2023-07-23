@@ -18,14 +18,20 @@ def aps_extract():
     is_flag=True,
     default=False,
 )
-def gplay(recursive: bool):
+@click.option(
+    "-l",
+    "--load-reviews",
+    is_flag=True,
+    default=False,
+)
+def gplay(recursive: bool, load_reviews: bool):
     from aps.gplay import GPlay
 
     gp = GPlay()
     if recursive:
-        asyncio.run(gp.fetch_all_recursive())
+        asyncio.run(gp.fetch_all_recursive(load_reviews=load_reviews))
     else:
-        asyncio.run(gp.fetch_all())
+        asyncio.run(gp.fetch_all(load_reviews=load_reviews))
 
 
 @aps_extract.command("appstore")
@@ -35,6 +41,7 @@ def gplay(recursive: bool):
     is_flag=True,
     default=False,
 )
+
 def appstore(recursive: bool):
     from aps.appstore import AppStore
 

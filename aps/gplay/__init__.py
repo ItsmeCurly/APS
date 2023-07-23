@@ -2,6 +2,7 @@ import asyncio
 import json
 from datetime import datetime
 from enum import IntEnum, StrEnum
+from pprint import pprint
 from typing import Any
 
 import requests
@@ -212,32 +213,35 @@ class GPlay:
         )
 
     async def _parse_response(self, content: str) -> list[ChartApplication]:
-        app_entries = content[0][1][0][28][0]
+        try:
+            app_entries = content[0][1][0][28][0]
+        except Exception:
+            return []
         apps = []
         for _, app_data in enumerate(app_entries):
             data = app_data[0]
 
             app = ChartApplication(
                 id=data[0][0],
-                icon_url=data[1][3][2],
-                screenshot_urls=[i[3][2] for i in data[2]],
-                name=data[3],
-                rating=data[4][1],
-                category=data[5],
-                price=f"{data[8][1][0][0] / 1e6} {data[8][1][0][1]}",
-                buy_url=data[8][6][5][2],
-                store_path=data[10][4][2],
-                trailer_url=data[12][0][0][3][2] if data[12] else None,
-                description=data[13][1],
-                developer=data[14],
-                downloads=data[15],
-                cover_image_url=data[22][3][2],
+                # icon_url=data[1][3][2],
+                # screenshot_urls=[i[3][2] for i in data[2]],
+                # name=data[3],
+                # rating=data[4][1],
+                # category=data[5],
+                # price=f"{data[8][1][0][0] / 1e6} {data[8][1][0][1]}",
+                # buy_url=data[8][6][5][2],
+                # store_path=data[10][4][2],
+                # trailer_url=data[12][0][0][3][2] if data[12] else None,
+                # description=data[13][1],
+                # developer=data[14],
+                # downloads=data[15],
+                # cover_image_url=data[22][3][2],
             )
             apps.append(app)
         return apps
 
     async def build_application_data(
-        self, app_id: str, load_reviews: bool = True
+        self, app_id: str, app_category: str, load_reviews: bool = True
     ) -> GPlayAppModel:
         """
         Builds application models and database objects
@@ -252,34 +256,40 @@ class GPlay:
 
         import google_play_scraper
 
-        app_ = google_play_scraper.app(app_id)
+        logger.debug(f"Loading information for app {app_id}")
 
-        if "released" in app_:
+        try:
+            app_ = google_play_scraper.app(app_id)
+        except Exception:
+            return None
+
+        if "released" in app_ and app_['released'] is not None:
             app_["released"] = datetime.strptime(app_["released"], "%b %d, %Y")
-        if "updated" in app_:
+        if "updated" in app_ and app_['updated'] is not None:
             app_["updated"] = datetime.fromtimestamp(app_["updated"])
 
-        app = GPlayAppModel(**app_)
+        print(str(app_category))
+        app = GPlayAppModel(**app_, app_category=str(app_category))
 
-        session = SessionLocal()
-        await create_db_obj(db_session=session, model_class=GPlayApp, obj=app)
+        async with SessionLocal() as session:
+            await create_db_obj(db_session=session, model_class=GPlayApp, obj=app)
 
-        if load_reviews:
-            logger.info(
-                f"Begin loading reviews for {app.app_id} from Google Play, this may take some time..."
-            )
-            async for reviews in app.reviews_all():
-                logger.info(f"{len(reviews)}")
-                reviews = [
-                    GPlayReviewModel(app_id=app.app_id, **review) for review in reviews
-                ]
+            if load_reviews:
+                logger.info(
+                    f"Begin loading reviews for {app.app_id} from Google Play, this may take some time..."
+                )
+                async for reviews in app.reviews_all():
+                    logger.info(f"{len(reviews)}")
+                    reviews = [
+                        GPlayReviewModel(app_id=app.app_id, **review) for review in reviews
+                    ]
 
-                for review in reviews:
-                    await create_db_obj(
-                        db_session=session, model_class=GPlayReview, obj=review
-                    )
-            logger.info(f"End loading reviews for {app.app_id}")
-
+                    for review in reviews:
+                        await create_db_obj(
+                            db_session=session, model_class=GPlayReview, obj=review
+                        )
+                logger.info(f"End loading reviews for {app.app_id}")
+        
         return app
 
     async def fetch_top_charts(
@@ -288,6 +298,7 @@ class GPlay:
         category: str,
         language: str,
         length: int = 50,
+        load_reviews: bool = True,
     ) -> list[GPlayAppModel]:
         """
         Fetches the top apps from the specified collection and category
@@ -317,17 +328,18 @@ class GPlay:
         apps = await self._parse_response(json_content)
 
         models = []
-        session = SessionLocal()
-        for app in apps:
-            result = await session.execute(
-                select(GPlayApp).where(GPlayApp.app_id == app.app_id)
-            )
-            db_obj = result.scalars().first()
+        async with SessionLocal() as session:
+            for app in apps:
+                if app is not None:
+                    result = await session.execute(
+                        select(GPlayApp).where(GPlayApp.app_id == app.app_id)
+                    )
+                    db_obj = result.scalars().first()
 
-            if db_obj:
-                logger.info(f"App {app.app_id} already processed, skipping")
-                continue
-            models.append(await self.build_application_data(app.app_id))
+                    if db_obj:
+                        logger.info(f"App {app.app_id} already processed, skipping")
+                        continue
+                    models.append(await self.build_application_data(app.app_id, app_category=category, load_reviews=load_reviews))
         return models
 
     async def fetch_similar(self, app: GPlayAppModel) -> list[GPlayAppModel]:
@@ -353,7 +365,7 @@ class GPlay:
                 apps.append(await self.build_application_data(app_id=app_id))
         return apps
 
-    async def fetch_all(self):
+    async def fetch_all(self, load_reviews: bool):
         """
         Fetches all apps from all categories and collections
         """
@@ -368,52 +380,53 @@ class GPlay:
                     category=category,
                     language=self.language.EN,
                     length=length,
+                    load_reviews=load_reviews,
                 )
 
                 logger.info(f"Found {len(apps)} apps")
 
-    async def fetch_all_recursive(self):
+    async def fetch_all_recursive(self, load_reviews: bool):
         """
         Fetches all apps from all categories and collections, along with recursively descending similar apps to all
         apps. Should be a fairly exhaustive search.
         """
 
-        session = SessionLocal()
-
-        to_search_similar = []
-        gp = GPlay()
-        for collection in gp.collection:
-            for category in gp.category:
-                length = 250
-                logger.info(
-                    f"Extracting top {length} from {collection} / {category} with language {gp.language.EN}"
-                )
-                apps = await self.fetch_top_charts(
-                    collection=collection,
-                    category=category,
-                    language=self.language.EN,
-                    length=length,
-                )
-
-                logger.info(f"Found {len(apps)} apps")
-
-                to_search_similar.append([app.app_id for app in apps])
-                while len(to_search_similar) > 0:
-                    app = to_search_similar.pop()
-
-                    result = await session.execute(
-                        select(GPlayApp).where(GPlayApp.app_id == app.app_id)
-                    )
-                    db_obj = result.scalars().first()
-
-                    if db_obj:
-                        logger.info(f"App {app.app_id} already processed, skipping")
-                        continue
-
-                    logger.info(f"Finding similar apps to {app.app_id}")
-                    similar_apps = await self.fetch_similar(app)
+        async with SessionLocal() as session:
+            to_search_similar = []
+            gp = GPlay()
+            for collection in gp.collection:
+                for category in gp.category:
+                    length = 250
                     logger.info(
-                        f"Found {len(similar_apps)} similar apps to {app.app_id}"
+                        f"Extracting top {length} from {collection} / {category} with language {gp.language.EN}"
                     )
-                    to_search_similar.append([app.app_id for app in similar_apps])
-                    await asyncio.sleep(15)
+                    apps = await self.fetch_top_charts(
+                        collection=collection,
+                        category=category,
+                        language=self.language.EN,
+                        length=length,
+                        load_reviews=load_reviews
+                    )
+
+                    logger.info(f"Found {len(apps)} apps")
+
+                    to_search_similar.append([app.app_id for app in apps])
+                    while len(to_search_similar) > 0:
+                        app = to_search_similar.pop()
+
+                        result = await session.execute(
+                            select(GPlayApp).where(GPlayApp.app_id == app.app_id)
+                        )
+                        db_obj = result.scalars().first()
+
+                        if db_obj:
+                            logger.info(f"App {app.app_id} already processed, skipping")
+                            continue
+
+                        logger.info(f"Finding similar apps to {app.app_id}")
+                        similar_apps = await self.fetch_similar(app)
+                        logger.info(
+                            f"Found {len(similar_apps)} similar apps to {app.app_id}"
+                        )
+                        to_search_similar.append([app.app_id for app in similar_apps])
+                        await asyncio.sleep(15)

@@ -72,14 +72,19 @@ async def reviews_all(
         if resp.status_code != 200:
             return reviews
         if "entry" in resp.json()["feed"]:
-            js = resp.json()["feed"]["entry"]
+            content = resp.json()["feed"]["entry"]
         else:
             return reviews
 
-        for review in js:
-            flat_review = flatten(review)
+        if isinstance(content, list):
+            for review in content:
+                flat_review = flatten(review)
 
+                review = AppStoreReviewModel(**flat_review)
+                reviews.append(review)
+        else:
+            flat_review = flatten(content)
+            
             review = AppStoreReviewModel(**flat_review)
-
             reviews.append(review)
     return reviews
