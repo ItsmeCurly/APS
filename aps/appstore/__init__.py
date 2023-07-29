@@ -165,7 +165,8 @@ class AppStore:
             category_name (str): Category name to search on, from constants.Category
             category_id (str): Category id to search on, from constants.Category
             chart (str): Chart to search on, from constants.Chart
-            category_params (str | None, optional): Category params to include with the request, from constants.Category, if present. Defaults to None.
+            category_params (str | None, optional): Category params to include with the request, 
+                from constants.Category, if present. Defaults to None.
 
         Returns:
             list[GPlayAppModel]: A list of the GPlay applications

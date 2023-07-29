@@ -13,6 +13,14 @@
             "args": ["extract", "gplay"]
         },
         {
+            "name": "Python: Extract GPlay with Privacy Policy",
+            "type": "python",
+            "request": "launch",
+            "module": "aps",
+            "justMyCode": true,
+            "args": ["extract", "gplay", "--load-policy-content"]
+        },
+        {
             "name": "Python: Extract Appstore",
             "type": "python",
             "request": "launch",

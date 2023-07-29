@@ -2,6 +2,7 @@ env/
 *.log
 chromedriver.exe
 .ruff_cache
+.artifacts
 
 project/
 # Byte-compiled / optimized / DLL files

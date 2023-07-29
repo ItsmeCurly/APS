@@ -2,7 +2,6 @@ import asyncio
 import json
 from datetime import datetime
 from enum import IntEnum, StrEnum
-from pprint import pprint
 from typing import Any
 
 import requests
@@ -241,7 +240,11 @@ class GPlay:
         return apps
 
     async def build_application_data(
-        self, app_id: str, app_category: str, load_reviews: bool = True
+        self,
+        app_id: str,
+        app_category: str,
+        load_policy_content: bool,
+        load_reviews: bool,
     ) -> GPlayAppModel:
         """
         Builds application models and database objects
@@ -263,13 +266,16 @@ class GPlay:
         except Exception:
             return None
 
-        if "released" in app_ and app_['released'] is not None:
+        if "released" in app_ and app_["released"] is not None:
             app_["released"] = datetime.strptime(app_["released"], "%b %d, %Y")
-        if "updated" in app_ and app_['updated'] is not None:
+        if "updated" in app_ and app_["updated"] is not None:
             app_["updated"] = datetime.fromtimestamp(app_["updated"])
 
         print(str(app_category))
         app = GPlayAppModel(**app_, app_category=str(app_category))
+
+        if load_policy_content:
+            await app.request_privacy_policy()
 
         async with SessionLocal() as session:
             await create_db_obj(db_session=session, model_class=GPlayApp, obj=app)
@@ -281,7 +287,8 @@ class GPlay:
                 async for reviews in app.reviews_all():
                     logger.info(f"{len(reviews)}")
                     reviews = [
-                        GPlayReviewModel(app_id=app.app_id, **review) for review in reviews
+                        GPlayReviewModel(app_id=app.app_id, **review)
+                        for review in reviews
                     ]
 
                     for review in reviews:
@@ -289,7 +296,7 @@ class GPlay:
                             db_session=session, model_class=GPlayReview, obj=review
                         )
                 logger.info(f"End loading reviews for {app.app_id}")
-        
+
         return app
 
     async def fetch_top_charts(
@@ -299,6 +306,7 @@ class GPlay:
         language: str,
         length: int = 50,
         load_reviews: bool = True,
+        load_policy_content: bool = True,
     ) -> list[GPlayAppModel]:
         """
         Fetches the top apps from the specified collection and category
@@ -339,7 +347,14 @@ class GPlay:
                     if db_obj:
                         logger.info(f"App {app.app_id} already processed, skipping")
                         continue
-                    models.append(await self.build_application_data(app.app_id, app_category=category, load_reviews=load_reviews))
+                    models.append(
+                        await self.build_application_data(
+                            app.app_id,
+                            app_category=category,
+                            load_policy_content=load_policy_content,
+                            load_reviews=load_reviews,
+                        )
+                    )
         return models
 
     async def fetch_similar(self, app: GPlayAppModel) -> list[GPlayAppModel]:
@@ -365,7 +380,7 @@ class GPlay:
                 apps.append(await self.build_application_data(app_id=app_id))
         return apps
 
-    async def fetch_all(self, load_reviews: bool):
+    async def fetch_all(self, load_policy_content: bool, load_reviews: bool):
         """
         Fetches all apps from all categories and collections
         """
@@ -380,12 +395,13 @@ class GPlay:
                     category=category,
                     language=self.language.EN,
                     length=length,
+                    load_policy_content=load_policy_content,
                     load_reviews=load_reviews,
                 )
 
                 logger.info(f"Found {len(apps)} apps")
 
-    async def fetch_all_recursive(self, load_reviews: bool):
+    async def fetch_all_recursive(self, load_policy_content: bool, load_reviews: bool):
         """
         Fetches all apps from all categories and collections, along with recursively descending similar apps to all
         apps. Should be a fairly exhaustive search.
@@ -405,7 +421,8 @@ class GPlay:
                         category=category,
                         language=self.language.EN,
                         length=length,
-                        load_reviews=load_reviews
+                        load_policy_content=load_policy_content,
+                        load_reviews=load_reviews,
                     )
 
                     logger.info(f"Found {len(apps)} apps")

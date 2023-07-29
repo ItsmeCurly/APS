@@ -1,11 +1,15 @@
 import asyncio
 from datetime import datetime
+import dateutil.parser
+from loguru import logger
 
 import requests
 from bs4 import BeautifulSoup
 from pydantic import BaseModel, Field
-from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, BigInteger
+from sqlalchemy import Boolean, Column, DateTime, Float, String, BigInteger
 
+import re
+from aps.const import DATE_REGEXES
 from aps.db.models.base import Base
 
 
@@ -45,12 +49,18 @@ class GPlayApp(Base):
     version = Column(String)
     url = Column(String)
     app_category = Column(String)
+    possible_policy_updates = Column(String)
+    policy_updated = Column(DateTime)
+    privacy_policy_text = Column(String)
+    privacy_policy_path = Column(String)
 
 
 class GPlayAppBase(BaseModel):
     app_id: str = Field(..., alias="id")
 
     async def reviews_all(self, sleep_milliseconds: int = 0, **kwargs) -> list:
+        # Adapted from google_play_scraper/features/reviews
+
         from google_play_scraper.features.reviews import MAX_COUNT_EACH_FETCH, reviews
 
         kwargs.pop("count", None)
@@ -123,6 +133,50 @@ class GPlayAppModel(GPlayAppBase):
     version: str | None = Field(None, alias="version")
     url: str | None = Field(None, alias="url")
     app_category: str | None = Field(None, alias="app_category")
+
+    possible_policy_updates: str | None = Field(None, alias="possible_policy_updates")
+    policy_updated: datetime | None = Field(None, alias="policy_updated")
+    privacy_policy_text: str | None = Field(None, alias="privacy_policy_text")
+    privacy_policy_path: str | None = Field(None, alias="privacy_policy_path")
+
+    async def request_privacy_policy(self) -> None:
+        """Grabs privacy policy content from the app's privacy policy URL
+
+
+
+        Returns:
+            None
+        """
+        import polipy
+
+        if not self.privacy_policy:
+            logger.warning(f"No privacy policy found for {self.app_id}")
+            return
+
+        result = polipy.get_policy(url=self.privacy_policy, screenshot=True)
+
+        if not result:
+            return
+
+        result_dict = result.to_dict()
+
+        self.privacy_policy_text = result_dict["content_text"]
+        self.privacy_policy_path = result.save(".artifacts/policies")
+
+        dates_found = []
+        # Test the regexes with some sample text
+        for regex in DATE_REGEXES:
+            dates_found.extend(re.findall(regex, result_dict["content_text"]))
+
+        dates_found = [dateutil.parser.parse(date) for date in dates_found]
+        # For debugging purposes
+        self.possible_policy_updates = ".".join(
+            [date.isoformat() for date in dates_found]
+        )
+
+        # If > 1, chooses last one, if = 1, chooses the only one
+        if dates_found:
+            self.policy_updated = max(dates_found)
 
 
 class ChartApplication(GPlayAppBase):

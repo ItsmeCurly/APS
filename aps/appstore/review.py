@@ -84,7 +84,7 @@ async def reviews_all(
                 reviews.append(review)
         else:
             flat_review = flatten(content)
-            
+
             review = AppStoreReviewModel(**flat_review)
             reviews.append(review)
     return reviews
